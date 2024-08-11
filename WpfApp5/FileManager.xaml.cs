@@ -22,30 +22,19 @@ namespace WpfApp5
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var thread = new Thread(WriteToFile);
+            var thread = new Thread(WriteTo);
             thread.Start();
         }
 
-        public async Task WriteToFileAsync()
+        public void WriteTo()
         {
             using var fileStream = new FileStream(@"C:\test.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite);
 
             for (int i = 0; i < 1_000_000_000; i++)
             {
                 byte[] buffer = Encoding.Default.GetBytes(userViewModel.ToString());
-                await fileStream.WriteAsync(buffer, 0, buffer.Length);
+                fileStream.Write(buffer, 0, buffer.Length);
             }
-        }
-
-        public void SomeMethod()
-        {
-            var thread = new Thread(PlayVideo);
-            thread.Start();
-        }
-
-        public void PlayVideo()
-        {
-            
         }
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
