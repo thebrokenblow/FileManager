@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FileManager\FileManager.csproj" />
+    <ProjectReference Include="..\FileManager\FileManager.UI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

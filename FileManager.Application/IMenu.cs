@@ -2,9 +2,10 @@
 
 public interface IMenu
 {
-    public int UserId { get; }
-    public string Path { get; }
-    public Action<string> Output { get; }
+    int UserId { get; }
+    string Path { get; }
+    Action<string> Output { get; }
+    Action<Action<string>, string> InputText { get; }
 
-    public void ChangePath(string path);
+    void ChangePath(string path);
 }
