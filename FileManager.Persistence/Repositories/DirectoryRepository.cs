@@ -1,4 +1,5 @@
 ﻿using FileManager.Domain.Entities;
+using FileManager.Domain.Entities.Enums;
 using FileManager.Domain.Interfaces.Repositories;
 using FileManager.Persistence.Data;
 
@@ -8,7 +9,7 @@ public class DirectoryRepository(
     FileManagerContext context, 
     IOperationDirectoryRepository operationDirectoryRepository) : IDirectoryRepository
 {
-    public async Task AddAsync(InfoDirectory infoDirectory, OperationDirectory operationDirectory)
+    public async Task AddAsync(InfoDirectory infoDirectory)
     {
         using var transaction = await context.Database.BeginTransactionAsync();
 
@@ -16,6 +17,14 @@ public class DirectoryRepository(
         {
             await context.AddAsync(infoDirectory);
             await context.SaveChangesAsync();
+
+            var operationDirectory = new OperationDirectory
+            {
+                ExecutedAt = infoDirectory.CreatedAt,
+                OperationType = OperationTypeDirectory.Create,
+                DirectoryId = infoDirectory.Id,
+                UserId = infoDirectory.UserId,
+            };
 
             await operationDirectoryRepository.AddAsync(operationDirectory);
 
