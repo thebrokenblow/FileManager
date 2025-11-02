@@ -37,9 +37,32 @@ public class DirectoryRepository(
         }
     }
 
-    public async Task UpdateAsync(InfoDirectory infoDirectory)
+
+    public async Task UpdateAsync(InfoDirectory infoDirectory, int userId, DateTime dateTimeMoveDirectory)
     {
-        context.Update(infoDirectory);
-        await context.SaveChangesAsync();
+        using var transaction = await context.Database.BeginTransactionAsync();
+
+        try
+        {
+            context.Update(infoDirectory);
+            await context.SaveChangesAsync();
+
+            var operationDirectory = new OperationDirectory
+            {
+                ExecutedAt = dateTimeMoveDirectory,
+                OperationType = OperationTypeDirectory.Modify,
+                UserId = userId,
+                DirectoryId = infoDirectory.Id
+            };
+
+            await operationDirectoryRepository.AddAsync(operationDirectory);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

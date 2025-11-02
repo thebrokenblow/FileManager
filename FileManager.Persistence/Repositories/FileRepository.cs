@@ -1,4 +1,5 @@
 ﻿using FileManager.Domain.Entities;
+using FileManager.Domain.Entities.Enums;
 using FileManager.Domain.Interfaces.Repositories;
 using FileManager.Persistence.Data;
 
@@ -8,7 +9,7 @@ public class FileRepository(
     FileManagerContext context, 
     IOperationFileRepository operationFileRepository) : IFileRepository
 {
-    public async Task AddAsync(InfoFile infoFile, OperationFile operationFile)
+    public async Task AddAsync(InfoFile infoFile, OperationTypeFile operationTypeFile)
     {
         using var transaction = await context.Database.BeginTransactionAsync();
 
@@ -16,6 +17,14 @@ public class FileRepository(
         {
             await context.AddAsync(infoFile);
             await context.SaveChangesAsync();
+
+            var operationFile = new OperationFile
+            {
+                OperationType = operationTypeFile,
+                ExecutedAt = infoFile.CreatedAt,
+                FileId = infoFile.Id,
+                UserId = infoFile.UserId,
+            };
 
             await operationFileRepository.AddAsync(operationFile);
 

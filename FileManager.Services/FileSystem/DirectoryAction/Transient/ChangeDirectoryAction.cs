@@ -56,14 +56,14 @@ public class ChangeDirectoryAction(
 
         commandValidator
             .ValidatePathSecurity(nameDirectory, $"Некорректные аргументы: {nameDirectory}")
-            .ValidateDirectoryExists(nameDirectory, $"Нет дериктории с именем: {fullPath}");
+            .ValidateDirectoryExists(fullPath, $"Нет дериктории с именем: {nameDirectory}");
 
-        _menu.ChangePath(fullPath);
+        _menu.Path = fullPath;
     }
 
     private void MoveDirectoryBelow()
     {
         var directoryBelow = directoryPath.GetDirectoryBelow();
-        _menu.ChangePath(directoryBelow);
+        _menu.Path = directoryBelow;
     }
 }

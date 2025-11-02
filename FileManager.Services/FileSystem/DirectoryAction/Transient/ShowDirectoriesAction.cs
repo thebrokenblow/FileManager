@@ -79,7 +79,8 @@ public class ShowDirectoriesAction(IMenu menu) : IFileSystemAction
                 stringResult.AppendLine(namesFilesAndDirectories[i]);
             }
 
-            stringResult.Append(namesFilesAndDirectories.Last());
+            var lastNameFileAndDirectory = namesFilesAndDirectories.Last();
+            stringResult.Append(lastNameFileAndDirectory);
         }
 
         _menu.Output.Invoke(stringResult.ToString());

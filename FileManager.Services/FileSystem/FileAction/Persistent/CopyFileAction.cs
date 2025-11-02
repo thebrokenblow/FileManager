@@ -14,7 +14,7 @@ public class CopyFileAction(
     DirectoryPath directoryPath) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 3;
-    private const string ArgumentMoveFileBelow = "-l";
+    public const string ArgumentMoveFileBelow = "-l";
 
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));
@@ -80,15 +80,7 @@ public class CopyFileAction(
             UserId = _menu.UserId
         };
 
-        var operationFile = new OperationFile
-        {
-            OperationType = OperationTypeFile.Create,
-            ExecutedAt = dateTimeCreateArchive,
-            FileId = infoFile.Id,
-            UserId = infoFile.UserId
-        };
-
-        await _fileRepository.AddAsync(infoFile, operationFile);
+        await _fileRepository.AddAsync(infoFile, OperationTypeFile.Modify);
     }
 
     private void CopyFileToDirectoryBelow(string nameSourceFile, string fullPathSourceFile)

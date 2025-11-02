@@ -70,14 +70,6 @@ public class CreateFileAction(
             UserId = _menu.UserId
         };
 
-        var operationFile = new OperationFile
-        {
-            OperationType = OperationTypeFile.Create,
-            ExecutedAt = dateTimeCreateArchive,
-            FileId = infoFile.Id,
-            UserId = infoFile.UserId
-        };
-
-        await _fileRepository.AddAsync(infoFile, operationFile);
+        await _fileRepository.AddAsync(infoFile, OperationTypeFile.Create);
     }
 }

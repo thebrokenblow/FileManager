@@ -3,11 +3,12 @@ using FileManager.Services.Utils;
 using FileManager.Services.Validation;
 using System.Text;
 
-namespace FileManager.Services.FileSystem.Disck.WithoutDatabase;
+namespace FileManager.Services.FileSystem.Disck.Transient;
 
 public class InfoDisckAction(IMenu menu) : IFileSystemAction
 {
-    private readonly IMenu _menu = menu ?? throw new ArgumentNullException(nameof(menu));
+    private readonly IMenu _menu = menu ?? 
+        throw new ArgumentNullException(nameof(menu));
 
     private readonly CommandValidator commandValidator = new();
     public void Execute(string command)

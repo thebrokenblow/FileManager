@@ -14,7 +14,7 @@ public class MoveFileAction(
     DirectoryPath directoryPath) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 3;
-    private const string ArgumentMoveFileBelow = "-l";
+    public const string ArgumentMoveFileBelow = "-l";
 
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));

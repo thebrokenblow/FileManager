@@ -1,5 +1,9 @@
-﻿using FileManager.Domain.Interfaces.Queries;
+﻿using FileManager.Domain.Entities;
+using FileManager.Domain.Entities.Enums;
+using FileManager.Domain.Interfaces.Queries;
 using FileManager.Domain.Interfaces.Repositories;
+using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Domain.Model;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -9,24 +13,23 @@ namespace FileManager.Services.FileSystem.DirectoryAction.Persistent;
 
 public class MoveDirectoriesAction(
     IMenu menu,
-    IDirectoryQueries directoryQueries,
-    IDirectoryRepository directoryRepository,
+    IDirectoryUseCase directoryUseCase,
     DirectoryPath directoryPath) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 3;
-    private const string ArgumentMoveDirectoryBelow = "-l";
+
+    public const string ArgumentMoveDirectoryBelow = "-l";
 
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
 
-    private readonly IDirectoryQueries _directoryQueries = directoryQueries ??
-        throw new ArgumentNullException(nameof(directoryQueries));
-
-    private readonly IDirectoryRepository _directoryRepository = directoryRepository ??
-        throw new ArgumentNullException(nameof(directoryRepository));
+    private readonly IDirectoryUseCase _directoryUseCase = directoryUseCase ??
+        throw new ArgumentNullException(nameof(directoryUseCase));
 
     private readonly CommandValidator commandValidator = new();
 
+    private string? _fullPathSourceDirectory;
+    private string? _fullPathDestinationDirectory;
     private string? _newFullPathDestinationDirectory;
 
     public void Execute(string command)
@@ -52,41 +55,47 @@ public class MoveDirectoriesAction(
             return;
         }
 
-        var fullPathDestinationDirectory = Path.Combine(_menu.Path, nameDestinationDirectory);
-        _newFullPathDestinationDirectory = Path.Combine(fullPathDestinationDirectory, nameSourceDirectory);
+        _fullPathSourceDirectory = Path.Combine(_menu.Path, nameSourceDirectory);
+        _fullPathDestinationDirectory = Path.Combine(_menu.Path, nameDestinationDirectory);
+        _newFullPathDestinationDirectory = Path.Combine(_fullPathDestinationDirectory, nameSourceDirectory);
 
         commandValidator
             .ValidateNotEmpty(nameDestinationDirectory, "Название директории не может быть пустым")
             .ValidatePathSecurity(nameDestinationDirectory, $"Недопустимое имя директории: {nameDestinationDirectory}")
-            .ValidateDirectoryExists(fullPathDestinationDirectory, $"Не существует директории с названием: {nameDestinationDirectory}")
-            .ValidateDirectoryExists(_newFullPathDestinationDirectory, $"В директории {nameSourceDirectory} уже существует директория {nameDestinationDirectory}");
+            .ValidateDirectoryExists(_fullPathDestinationDirectory, $"Не существует директории с названием: {nameDestinationDirectory}")
+            .ValidateDirectoryNotExists(_newFullPathDestinationDirectory, $"В директории {nameDestinationDirectory} уже существует директория {nameSourceDirectory}");
         
         MoveDirectory(fullPathSourceDirectory, _newFullPathDestinationDirectory);
     }
 
     public async Task SaveToDatabaseAsync()
     {
-        if (_newFullPathDestinationDirectory is null)
+        if (_fullPathSourceDirectory is null ||
+            _fullPathDestinationDirectory is null ||
+            _newFullPathDestinationDirectory is null)
         {
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var infoDirectory = await _directoryQueries.GetByLocationAsync(_newFullPathDestinationDirectory) ??
-                                        throw new Exception("Отсутствует соответствующая запись директории");
+        var moveDirectoryModel = new MoveDirectoryModel(
+            DateTime.UtcNow,
+            _fullPathSourceDirectory,
+            _fullPathDestinationDirectory,
+            _newFullPathDestinationDirectory,
+            _menu.UserId);
 
-        infoDirectory.Location = _newFullPathDestinationDirectory;
-        await _directoryRepository.UpdateAsync(infoDirectory);
+        await _directoryUseCase.MoveDirectoryAsync(moveDirectoryModel);
     }
 
     private void MoveDirectoryToDirectoryBelow(string nameSourceDirectory, string fullPathSourceDirectory)
     {
         var directoryBelow = directoryPath.GetDirectoryBelow();
+
+        _fullPathSourceDirectory = fullPathSourceDirectory;
         _newFullPathDestinationDirectory = Path.Combine(directoryBelow, nameSourceDirectory);
 
-        if (Directory.Exists(_newFullPathDestinationDirectory))
-        {
-            throw new ArgumentException($"Уже существует директория: {nameSourceDirectory} на уровне ниже");
-        }
+        commandValidator
+            .ValidateDirectoryNotExists(_newFullPathDestinationDirectory, $"Уже существует директория: {nameSourceDirectory} на уровне ниже");
 
         MoveDirectory(fullPathSourceDirectory, _newFullPathDestinationDirectory);   
     }

@@ -31,11 +31,11 @@ public class InfoFileConfiguration : IEntityTypeConfiguration<InfoFile>
 
         builder.Property(file => file.Size)
                .HasColumnName("size")
-               .IsRequired(false);
+               .IsRequired();
 
         builder.Property(file => file.Location)
                .HasColumnName("location")
-               .IsRequired(false);
+               .IsRequired();
 
         builder.Property(file => file.UserId)
                .HasColumnName("owner_id")

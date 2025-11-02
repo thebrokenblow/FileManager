@@ -1,7 +1,5 @@
-﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Entities.Enums;
-using FileManager.Domain.Interfaces.Queries;
-using FileManager.Domain.Interfaces.Repositories;
+﻿using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Domain.Model;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -10,24 +8,22 @@ using FileManager.Services.Validation;
 namespace FileManager.Services.FileSystem.DirectoryAction.Persistent;
 
 public class DeleteDirectoryAction(
-    IMenu menu, 
-    IDirectoryQueries directoryQueries, 
-    IOperationDirectoryRepository operationDirectoryRepository) : IFileSystemAction, IFileSystemPersistentAction
+    IMenu menu,
+    IDirectoryUseCase directoryUseCase) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 2;
 
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
 
-    private readonly IDirectoryQueries _directoryQueries = directoryQueries ??
-        throw new ArgumentNullException(nameof(directoryQueries));
-
-    private readonly IOperationDirectoryRepository _operationDirectoryRepository = operationDirectoryRepository ??
-        throw new ArgumentNullException(nameof(operationDirectoryRepository));
+    private readonly IDirectoryUseCase _directoryUseCase = directoryUseCase ??
+        throw new ArgumentNullException(nameof(directoryUseCase));
 
     private readonly CommandValidator commandValidator = new();
 
     private string? _fullPathDirectory;
+    private string[]? childLocationsFiles;
+    private string[]? childLocationsDirectories;
 
     public void Execute(string command)
     {
@@ -44,6 +40,10 @@ public class DeleteDirectoryAction(
             .ValidateNotEmpty(nameDirectory, "Имя директории не может быть пустым")
             .ValidatePathSecurity(nameDirectory, $"Недопустимое имя директории: {nameDirectory}")
             .ValidateDirectoryExists(_fullPathDirectory, $"Нет дериктории с именем: {nameDirectory}");
+
+
+        childLocationsFiles = Directory.GetFiles(_fullPathDirectory, "*", SearchOption.AllDirectories);
+        childLocationsDirectories = Directory.GetDirectories(_fullPathDirectory, "*", SearchOption.AllDirectories);
 
         try
         {
@@ -62,17 +62,13 @@ public class DeleteDirectoryAction(
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var directoryId = await _directoryQueries.GetIdByLocationAsync(_fullPathDirectory) ??
-                                    throw new InvalidOperationException("Некорректное поведение системы, проблема с базой данных");
+        var deleteDirectoryModel = new DeleteDirectoryModel(
+            DateTime.UtcNow,
+            _fullPathDirectory,
+            _menu.UserId,
+            childLocationsFiles,
+            childLocationsDirectories);
 
-        var operationDirectory = new OperationDirectory
-        {
-            OperationType = OperationTypeDirectory.Delete,
-            ExecutedAt = DateTime.UtcNow,
-            DirectoryId = directoryId,
-            UserId = _menu.UserId
-        };
-
-        await _operationDirectoryRepository.AddAsync(operationDirectory);
+        await _directoryUseCase.DeleteDirectoryAsync(deleteDirectoryModel);
     }
 }

@@ -3,12 +3,12 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace FileManager.Persistence.Data;
 
-public class FileManagerContextFactory(string connectionString) : IDesignTimeDbContextFactory<FileManagerContext>
+public class FileManagerContextFactory : IDesignTimeDbContextFactory<FileManagerContext>
 {
     public FileManagerContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<FileManagerContext>();
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseSqlServer();
 
         var context = new FileManagerContext(optionsBuilder.Options);
 

@@ -1,6 +1,13 @@
-﻿using FileManager.Persistence.Data;
+﻿using FileManager.Persistence.Extensions;
+using FileManager.Services;
+using FileManager.Services.Extensions;
+using FileManager.Services.Utils;
 using FileManager.UI.ViewUI;
+using FileManager.UI.ViewUI.Components;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+var services = new ServiceCollection();
 
 var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
@@ -10,9 +17,6 @@ var configuration = new ConfigurationBuilder()
 string connectionString = configuration.GetConnectionString("DbConnection")
                                 ?? throw new InvalidOperationException("Connection string not found");
 
-var fileManagerContextFactory = new FileManagerContextFactory(connectionString);
-var context = fileManagerContextFactory.CreateDbContext(args);
-
 var currentPath = Directory.GetCurrentDirectory();
 var fullPathUserDirectory = Path.Combine(currentPath, Menu.TitleUserDirectory);
 
@@ -21,11 +25,25 @@ if (!Directory.Exists(fullPathUserDirectory))
     Directory.CreateDirectory(fullPathUserDirectory);
 }
 
-var menu = new Menu(fullPathUserDirectory, context);
+services.AddTransient<DirectoryPath>();
+services.AddTransient<IMenu>(provider => new Menu
+{
+    UserId = 1,
+    Path = fullPathUserDirectory,
+    Output = Console.WriteLine,
+    OutputHelpPanel = HelpPanel.Output,
+    InputText = InputPanel.Input
+});
 
-Console.WriteLine("File Manager started. Type 'help' for commands.");
+services.AddPersistenceServices(connectionString);
+services.AddApplicationServices();
+
+using var serviceProvider = services.BuildServiceProvider();
+var menu = serviceProvider.GetRequiredService<IMenu>();
+
+var menuHandler = new MenuHandler(menu, serviceProvider);
 
 while (true)
 {
-    await menu.EnterCommand();
+    await menuHandler.EnterCommand();
 }
