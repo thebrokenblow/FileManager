@@ -75,7 +75,7 @@ public class DeleteDirectoryAction(
                 _childLocationsFiles,
                 _childLocationsDirectories);
 
-            await _directoryUseCase.DeleteDirectoryAsync(deleteDirectoryModel, _menu.UserId);
+            await _directoryUseCase.DeleteAsync(deleteDirectoryModel, _menu.UserId);
         }
         catch (Exception ex)
         {

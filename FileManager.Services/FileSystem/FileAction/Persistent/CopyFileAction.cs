@@ -22,6 +22,9 @@ public class CopyFileAction(
     private readonly IFileUseCase _fileUseCase = fileUseCase ??
         throw new ArgumentNullException(nameof(fileUseCase));
 
+    private readonly DirectoryPath _directoryPath = directoryPath ??
+        throw new ArgumentNullException(nameof(directoryPath));
+
     private readonly CommandValidator commandValidator = new();
 
     private long? _fileSize;
@@ -87,7 +90,7 @@ public class CopyFileAction(
                 dateTimeCopyFile,
                 _fileSize.Value);
 
-            await _fileUseCase.CreateFileAsync(fileModel, _menu.UserId);
+            await _fileUseCase.CreateAsync(fileModel, _menu.UserId);
         }
         catch (Exception ex)
         {
@@ -97,7 +100,7 @@ public class CopyFileAction(
 
     private void CopyFileToDirectoryBelow(string nameSourceFile, string fullPathSourceFile)
     {
-        var directoryBelow = directoryPath.GetDirectoryBelow();
+        var directoryBelow = _directoryPath.GetDirectoryBelow();
         var fullPathFileBelow = Path.Combine(directoryBelow, nameSourceFile);
 
         commandValidator
@@ -125,5 +128,6 @@ public class CopyFileAction(
         _fileSize = null;
         _nameSourceFile = null;
         _fullPathSourceFile = null;
+        _fullPathDestinationFile = null;
     }
 }

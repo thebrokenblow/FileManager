@@ -6,15 +6,18 @@ namespace FileManager.Persistence.Repositories;
 
 public class DirectoryRepository(FileManagerContext context) : IDirectoryRepository
 {
+    private readonly FileManagerContext _context = context ??
+        throw new ArgumentNullException(nameof(context));
+
     public async Task AddAsync(InfoDirectory infoDirectory)
     {
-        await context.AddAsync(infoDirectory);
-        await context.SaveChangesAsync();
+        await _context.AddAsync(infoDirectory);
+        await _context.SaveChangesAsync();
     }
 
     public async Task UpdateAsync(InfoDirectory infoDirectory)
     {
-        context.Update(infoDirectory);
-        await context.SaveChangesAsync();
+        _context.Update(infoDirectory);
+        await _context.SaveChangesAsync();
     }
 }

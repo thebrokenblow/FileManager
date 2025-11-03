@@ -101,7 +101,7 @@ public class ArchiveZipFilesAction(
             var createAt = DateTime.UtcNow;
             var fileModel = new FileModel(_nameFileArchive, _fullPathFileArchive, createAt, _archiveSize.Value);
 
-            await _fileUseCase.CreateFileAsync(fileModel, _menu.UserId);
+            await _fileUseCase.CreateAsync(fileModel, _menu.UserId);
         }
         catch (Exception ex)
         {

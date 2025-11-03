@@ -4,6 +4,7 @@ namespace FileManager.Domain.Interfaces.UseCases;
 
 public interface IFileUseCase
 {
-    Task CreateFileAsync(FileModel fileModel, int userId);
-    Task ModifyFileSizeOperationAsync(ModifyFileSizeOperationModel modifyFileSizeOperationModel);
+    Task CreateAsync(FileModel fileModel, int userId);
+    Task MoveAsync(MoveFileModel moveFileModel, int userId);
+    Task ModifySizeAsync(WriteFileModel modifyFileSizeOperationModel);
 }

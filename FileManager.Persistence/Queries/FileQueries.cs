@@ -7,24 +7,27 @@ namespace FileManager.Persistence.Queries;
 
 public class FileQueries(FileManagerContext context) : IFileQueries
 {
+    private readonly FileManagerContext _context = context ??
+        throw new ArgumentNullException(nameof(context));
+
     public async Task<InfoFile?> GetByLocationAsync(string fullPath)
     {
-        var fileOperation = await context.FileOperations
-                                         .Where(operationFile => operationFile.File!.Location == fullPath)
-                                         .OrderBy(operationFile => operationFile.ExecutedAt)
-                                         .Select(operationFile => operationFile.File)
-                                         .FirstOrDefaultAsync();
+        var fileOperation = await _context.FileOperations
+                                          .Where(operationFile => operationFile.File!.Location == fullPath)
+                                          .OrderBy(operationFile => operationFile.ExecutedAt)
+                                          .Select(operationFile => operationFile.File)
+                                          .FirstOrDefaultAsync();
 
         return fileOperation;
     }
 
     public async Task<int?> GetIdByLocationAsync(string fullPath)
     {
-        var fileId = await context.FileOperations
-                                  .Where(operationFile => operationFile.File!.Location == fullPath)
-                                  .OrderBy(operationFile => operationFile.ExecutedAt)
-                                  .Select(operationFile => operationFile.FileId)
-                                  .FirstOrDefaultAsync();
+        var fileId = await _context.FileOperations
+                                   .Where(operationFile => operationFile.File!.Location == fullPath)
+                                   .OrderBy(operationFile => operationFile.ExecutedAt)
+                                   .Select(operationFile => operationFile.FileId)
+                                   .FirstOrDefaultAsync();
 
         return fileId;
     }

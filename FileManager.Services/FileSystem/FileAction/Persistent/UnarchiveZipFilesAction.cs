@@ -17,15 +17,28 @@ public class UnarchiveZipFilesAction(
     CreateDirectoryAction createDirectoryAction) : IFileSystemAction, IFileSystemPersistentAction
 {
     // Лимиты для защиты от ZIP-бомб
-    private const long MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500 MB
-    private const long MAX_COMPRESSION_RATIO = 100; // 100:1
-    private const int MAX_FILE_COUNT = 10000; // Максимальное количество файлов
-    private const long MAX_SINGLE_FILE_SIZE = 50 * 1024 * 1024; // 50 MB на файл
+    // 500 MB
+    private const long MaxTotalSize = 500 * 1024 * 1024;
 
+    // 100:1
+    private const long MaxComperssionSize = 100;
+
+    // Максимальное количество файлов
+    private const int MaxFileCount = 10000;
+
+    // 50 MB на файл
+    private const long MaxSingleFileSize = 50 * 1024 * 1024; 
+    
     private const int CountArguments = 2;
 
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
+
+    private readonly IFileRepository _fileRepository = fileRepository ??
+        throw new ArgumentNullException(nameof(fileRepository));
+
+    private readonly CreateDirectoryAction _createDirectoryAction = createDirectoryAction ??
+        throw new ArgumentNullException(nameof(createDirectoryAction));
 
     private readonly CommandValidator commandValidator = new();
     private List<FileModel>? _files;
@@ -60,7 +73,7 @@ public class UnarchiveZipFilesAction(
 
         try
         {
-            createDirectoryAction.Execute($"mkdir {nameFileDirectory}");
+            _createDirectoryAction.Execute($"mkdir {nameFileDirectory}");
         }
         catch
         {
@@ -90,14 +103,14 @@ public class UnarchiveZipFilesAction(
             totalCompressedSize += entry.CompressedLength;
             totalUncompressedSize += entry.Length;
 
-            if (fileCount > MAX_FILE_COUNT)
+            if (fileCount > MaxFileCount)
             {
                 throw new SecurityException(
                     $"Архив содержит слишком много файлов ({fileCount}). " +
-                    $"Максимально допустимо: {MAX_FILE_COUNT}");
+                    $"Максимально допустимо: {MaxFileCount}");
             }
 
-            if (entry.Length > MAX_SINGLE_FILE_SIZE)
+            if (entry.Length > MaxSingleFileSize)
             {
                 throw new SecurityException($"Файл '{entry.FullName}' слишком большой");
             }
@@ -105,13 +118,13 @@ public class UnarchiveZipFilesAction(
             if (entry.CompressedLength > 0)
             {
                 var compressionRatio = (double)entry.Length / entry.CompressedLength;
-                if (compressionRatio > MAX_COMPRESSION_RATIO)
+                if (compressionRatio > MaxComperssionSize)
                 {
                     throw new SecurityException("Обнаружен подозрительно высокий коэффициент сжатия");
                 }
             }
 
-            if (totalUncompressedSize > MAX_TOTAL_SIZE)
+            if (totalUncompressedSize > MaxTotalSize)
             {
                 throw new SecurityException("Общий размер распакованных файлов превышает лимит");
             }
@@ -120,7 +133,7 @@ public class UnarchiveZipFilesAction(
         if (totalCompressedSize > 0)
         {
             var overallCompressionRatio = (double)totalUncompressedSize / totalCompressedSize;
-            if (overallCompressionRatio > MAX_COMPRESSION_RATIO)
+            if (overallCompressionRatio > MaxComperssionSize)
             {
                 throw new SecurityException("Общий коэффициент сжатия архива подозрительно высок");
             }
@@ -173,7 +186,7 @@ public class UnarchiveZipFilesAction(
                     totalExtractedSize += entry.Length;
                     extractedFiles++;
 
-                    if (totalExtractedSize > MAX_TOTAL_SIZE)
+                    if (totalExtractedSize > MaxTotalSize)
                     {
                         SafeCleanup(extractPath);
                         throw new SecurityException("Превышен лимит размера при извлечении");
@@ -229,7 +242,7 @@ public class UnarchiveZipFilesAction(
             })
             .ToList();
 
-            await fileRepository.AddAsync(infoFiles);
+            await _fileRepository.AddAsync(infoFiles);
         }
         catch (Exception ex)
         {

@@ -71,7 +71,7 @@ public class CreateFileAction(
                 dateTimeCreateFile, 
                 FileSizeWhenCreated);
 
-            await _fileUseCase.CreateFileAsync(fileModel, _menu.UserId);
+            await _fileUseCase.CreateAsync(fileModel, _menu.UserId);
         }
         catch (Exception ex)
         {

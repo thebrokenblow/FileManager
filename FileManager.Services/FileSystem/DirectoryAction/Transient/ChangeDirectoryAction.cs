@@ -1,4 +1,5 @@
-﻿using FileManager.Services.Extensions;
+﻿using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
 using FileManager.Services.Validation;
@@ -18,6 +19,9 @@ public class ChangeDirectoryAction(
 
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
+
+    private readonly DirectoryPath _directoryPath = directoryPath ??
+        throw new ArgumentNullException(nameof(directoryPath));
 
     private readonly CommandValidator commandValidator = new();
 
@@ -64,7 +68,7 @@ public class ChangeDirectoryAction(
 
     private void MoveDirectoryBelow()
     {
-        var directoryBelow = directoryPath.GetDirectoryBelow();
+        var directoryBelow = _directoryPath.GetDirectoryBelow();
         _menu.Path = directoryBelow;
     }
 }

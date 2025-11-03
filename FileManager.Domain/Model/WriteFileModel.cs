@@ -1,7 +1,8 @@
 ﻿namespace FileManager.Domain.Model;
 
-public record ModifyFileSizeOperationModel(
+public record WriteFileModel(
     string PathFile, 
     long FileSize, 
     DateTime ExecutedAt, 
-    int UserId);
+    int UserId
+);

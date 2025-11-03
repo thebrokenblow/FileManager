@@ -1,4 +1,5 @@
-﻿using FileManager.Domain.Interfaces.UseCases;
+﻿using FileManager.Domain.Interfaces.Repositories;
+using FileManager.Domain.Interfaces.UseCases;
 using FileManager.Domain.Model;
 using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
@@ -16,6 +17,9 @@ public class WriteFileAction(
 
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
+
+    private readonly IFileUseCase _fileUseCase = fileUseCase ??
+        throw new ArgumentNullException(nameof(fileUseCase));
 
     private readonly CommandValidator commandValidator = new();
 
@@ -56,13 +60,14 @@ public class WriteFileAction(
         try
         {
             var modifyAt = DateTime.UtcNow;
-            var modifyFileSizeOperationModel = new ModifyFileSizeOperationModel(
+
+            var modifyFileSizeOperationModel = new WriteFileModel(
                 _fullPathFile,
                 _fileSize.Value,
                 modifyAt,
                 _menu.UserId);
 
-            await fileUseCase.ModifyFileSizeOperationAsync(modifyFileSizeOperationModel);
+            await _fileUseCase.ModifySizeAsync(modifyFileSizeOperationModel);
         }
         catch (Exception ex)
         {

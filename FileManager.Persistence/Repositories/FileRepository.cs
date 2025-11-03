@@ -6,21 +6,24 @@ namespace FileManager.Persistence.Repositories;
 
 public class FileRepository(FileManagerContext context) : IFileRepository
 {
+    private readonly FileManagerContext _context = context ??
+        throw new ArgumentNullException(nameof(context));
+
     public async Task AddAsync(InfoFile infoFile)
     {
-        await context.AddAsync(infoFile);
-        await context.SaveChangesAsync();
+        await _context.AddAsync(infoFile);
+        await _context.SaveChangesAsync();
     }
 
     public async Task AddAsync(List<InfoFile> infoFile)
     {
-        await context.AddRangeAsync(infoFile);
-        await context.SaveChangesAsync();
+        await _context.AddRangeAsync(infoFile);
+        await _context.SaveChangesAsync();
     }
 
     public async Task UpdateAsync(InfoFile infoFile)
     {
-        context.Update(infoFile);
-        await context.SaveChangesAsync();
+        _context.Update(infoFile);
+        await _context.SaveChangesAsync();
     }
 }

@@ -14,9 +14,21 @@ public class FileUseCase(
     IFileRepository fileRepository, 
     IOperationFileRepository operationFileRepository) : IFileUseCase
 {
-    public async Task CreateFileAsync(FileModel fileModel, int userId)
+    private readonly FileManagerContext _context = context ??
+        throw new ArgumentNullException(nameof(context));
+
+    private readonly IFileQueries _fileQueries = fileQueries ??
+        throw new ArgumentNullException(nameof(fileQueries));
+
+    private readonly IFileRepository _fileRepository = fileRepository ??
+        throw new ArgumentNullException(nameof(fileRepository));
+
+    private readonly IOperationFileRepository _operationFileRepository = operationFileRepository ??
+        throw new ArgumentNullException(nameof(operationFileRepository));
+
+    public async Task CreateAsync(FileModel fileModel, int userId)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
@@ -29,7 +41,7 @@ public class FileUseCase(
                 UserId = userId
             };
 
-            await fileRepository.AddAsync(infoFile);
+            await _fileRepository.AddAsync(infoFile);
 
             var operationFile = new OperationFile
             {
@@ -39,7 +51,7 @@ public class FileUseCase(
                 UserId = userId
             };
 
-            await operationFileRepository.AddAsync(operationFile);
+            await _operationFileRepository.AddAsync(operationFile);
 
             await transaction.CommitAsync();
         }
@@ -50,17 +62,17 @@ public class FileUseCase(
         }
     }
 
-    public async Task ModifyFileSizeOperationAsync(ModifyFileSizeOperationModel modifyFileSizeOperationModel)
+    public async Task ModifySizeAsync(WriteFileModel modifyFileSizeOperationModel)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            var file = await fileQueries.GetByLocationAsync(modifyFileSizeOperationModel.PathFile) ??
+            var file = await _fileQueries.GetByLocationAsync(modifyFileSizeOperationModel.PathFile) ??
                                 throw new Exception();
 
             file.Size = modifyFileSizeOperationModel.FileSize;
-            await fileRepository.UpdateAsync(file);
+            await _fileRepository.UpdateAsync(file);
 
             var operationFile = new OperationFile
             {
@@ -70,8 +82,38 @@ public class FileUseCase(
                 UserId = modifyFileSizeOperationModel.UserId,
             };
 
-            await operationFileRepository.AddAsync(operationFile);
+            await _operationFileRepository.AddAsync(operationFile);
 
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task MoveAsync(MoveFileModel moveFileModel, int userId)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var infoFile = await _fileQueries.GetByLocationAsync(moveFileModel.PathSourceFile) ??
+                                    throw new Exception($"Файл не найден в базе данных: {moveFileModel.PathSourceFile}", null);
+
+            infoFile.Location = moveFileModel.NewPathSourceFile;
+            await _fileRepository.UpdateAsync(infoFile);
+
+            var operationFile = new OperationFile
+            {
+                OperationType = OperationTypeFile.Modify,
+                ExecutedAt = moveFileModel.ExecuteAt,
+                FileId = infoFile.Id,
+                UserId = userId
+            };
+
+            await _operationFileRepository.AddAsync(operationFile);
             await transaction.CommitAsync();
         }
         catch

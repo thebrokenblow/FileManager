@@ -1,5 +1,5 @@
-﻿using FileManager.Domain.Interfaces.Queries;
-using FileManager.Domain.Interfaces.Repositories;
+﻿using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Domain.Model;
 using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
@@ -10,8 +10,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
 public class MoveFileAction(
     IMenu menu,
-    IFileQueries fileQueries,
-    IFileRepository fileRepository,
+    IFileUseCase fileUseCase,
     DirectoryPath directoryPath) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 3;
@@ -20,11 +19,11 @@ public class MoveFileAction(
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
 
-    private readonly IFileQueries _fileQueries = fileQueries ??
-        throw new ArgumentNullException(nameof(fileQueries));
+    private readonly IFileUseCase _fileUseCase = fileUseCase ??
+        throw new ArgumentNullException(nameof(fileUseCase));
 
-    private readonly IFileRepository _fileRepository = fileRepository ??
-        throw new ArgumentNullException(nameof(fileRepository));
+    private readonly DirectoryPath _directoryPath = directoryPath ??
+        throw new ArgumentNullException(nameof(directoryPath));
 
     private readonly CommandValidator commandValidator = new();
 
@@ -75,11 +74,12 @@ public class MoveFileAction(
 
         try
         {
-            var infoFile = await _fileQueries.GetByLocationAsync(_fullPathSourceFile) ??
-                                    throw new DatabaseOperationException($"Файл не найден в базе данных: {_fullPathSourceFile}", null);
+            var moveFileModel = new MoveFileModel(
+                _fullPathSourceFile, 
+                _fullNameDestinationDirectoryFile,
+                DateTime.UtcNow);
 
-            infoFile.Location = _fullNameDestinationDirectoryFile;
-            await _fileRepository.UpdateAsync(infoFile);
+            await _fileUseCase.MoveAsync(moveFileModel, _menu.UserId);
         }
         catch (Exception ex)
         {
@@ -89,7 +89,7 @@ public class MoveFileAction(
 
     private void MoveFileToDirectoryBelow(string nameSourceFile, string fullPathSourceFile)
     {
-        var directoryBelow = directoryPath.GetDirectoryBelow();
+        var directoryBelow = _directoryPath.GetDirectoryBelow();
         _fullNameDestinationDirectoryFile = Path.Combine(directoryBelow, nameSourceFile);
 
         commandValidator

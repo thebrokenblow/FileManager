@@ -16,9 +16,27 @@ public class DirectoryUseCase(
     IFileQueries fileQueries,
     IOperationFileRepository operationFileRepository) : IDirectoryUseCase
 {
-    public async Task CreateDirectoryAsync(DirectoryModel directoryModel, int userId)
+    private readonly FileManagerContext _context = context ??
+        throw new ArgumentNullException(nameof(context));
+
+    private readonly IDirectoryQueries _directoryQueries = directoryQueries ??
+        throw new ArgumentNullException(nameof(directoryQueries));
+
+    private readonly IDirectoryRepository _directoryRepository = directoryRepository ??
+        throw new ArgumentNullException(nameof(directoryRepository));
+
+    private readonly IOperationDirectoryRepository _operationDirectoryRepository = operationDirectoryRepository ??
+        throw new ArgumentNullException(nameof(operationDirectoryRepository));
+
+    private readonly IFileQueries _fileQueries = fileQueries ??
+        throw new ArgumentNullException(nameof(fileQueries));
+
+    private readonly IOperationFileRepository _operationFileRepository = operationFileRepository ??
+        throw new ArgumentNullException(nameof(operationFileRepository));
+
+    public async Task CreateAsync(DirectoryModel directoryModel, int userId)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
@@ -30,7 +48,7 @@ public class DirectoryUseCase(
                 UserId = userId
             };
 
-            await directoryRepository.AddAsync(infoDirectory);
+            await _directoryRepository.AddAsync(infoDirectory);
 
             var operationDirectory = new OperationDirectory
             {
@@ -40,7 +58,7 @@ public class DirectoryUseCase(
                 UserId = userId,
             };
 
-            await operationDirectoryRepository.AddAsync(operationDirectory);
+            await _operationDirectoryRepository.AddAsync(operationDirectory);
 
             await transaction.CommitAsync();
         }
@@ -51,13 +69,13 @@ public class DirectoryUseCase(
         }
     }
 
-    public async Task DeleteDirectoryAsync(DeleteDirectoryModel deleteDirectoryModel, int userId)
+    public async Task DeleteAsync(DeleteDirectoryModel deleteDirectoryModel, int userId)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            var directoryId = await directoryQueries.GetIdByLocationAsync(deleteDirectoryModel.PathDirectory) ??
+            var directoryId = await _directoryQueries.GetIdByLocationAsync(deleteDirectoryModel.PathDirectory) ??
                                         throw new InvalidOperationException("Некорректное поведение системы, проблема с базой данных");
 
             var operationDirectory = new OperationDirectory
@@ -68,7 +86,7 @@ public class DirectoryUseCase(
                 UserId = userId
             };
 
-            await operationDirectoryRepository.AddAsync(operationDirectory);
+            await _operationDirectoryRepository.AddAsync(operationDirectory);
 
             if (deleteDirectoryModel.ChildLocationsFiles is not null)
             {
@@ -101,7 +119,7 @@ public class DirectoryUseCase(
 
         foreach (var locationFile in locationsFiles)
         {
-            var fileId = await fileQueries.GetIdByLocationAsync(locationFile) ??
+            var fileId = await _fileQueries.GetIdByLocationAsync(locationFile) ??
                                 throw new InvalidOperationException("Некорректное поведение системы, проблема с базой данных");
 
             var operationFile = new OperationFile
@@ -115,7 +133,7 @@ public class DirectoryUseCase(
             operationsFiles.Add(operationFile);
         }
 
-        await operationFileRepository.AddAsync(operationsFiles);
+        await _operationFileRepository.AddAsync(operationsFiles);
     }
 
     public async Task SaveRangeOperationsDirectoriesAsync(string[] locationsDirectories, DateTime executedAt, int userId)
@@ -124,7 +142,7 @@ public class DirectoryUseCase(
 
         foreach (var locationDirectory in locationsDirectories)
         {
-            var directoryId = await directoryQueries.GetIdByLocationAsync(locationDirectory) ??
+            var directoryId = await _directoryQueries.GetIdByLocationAsync(locationDirectory) ??
                                         throw new InvalidOperationException("Некорректное поведение системы, проблема с базой данных");
 
             var operationDirectory = new OperationDirectory
@@ -138,24 +156,23 @@ public class DirectoryUseCase(
             operationsDirectories.Add(operationDirectory);
         }
 
-        await operationDirectoryRepository.AddAsync(operationsDirectories);
+        await _operationDirectoryRepository.AddAsync(operationsDirectories);
     }
 
-    public async Task MoveDirectoryAsync(MoveDirectoryModel moveDirectoryModel, int userId)
+    public async Task MoveAsync(MoveDirectoryModel moveDirectoryModel, int userId)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
         try
         {
-            var infoDirectory = await directoryQueries.GetByLocationAsync(moveDirectoryModel.PathSourceDirectory) ??
+            var infoDirectory = await _directoryQueries.GetByLocationAsync(moveDirectoryModel.PathSourceDirectory) ??
                                         throw new Exception("Отсутствует соответствующая запись директории");
 
-            infoDirectory.UserId = userId;
             infoDirectory.Location = moveDirectoryModel.NewFullPathDestinationDirectory;
 
-            await directoryRepository.UpdateAsync(infoDirectory);
+            await _directoryRepository.UpdateAsync(infoDirectory);
 
-            var idSourceDirectory = await directoryQueries.GetIdByLocationAsync(moveDirectoryModel.PathDestinationDirectory) ??
+            var idSourceDirectory = await _directoryQueries.GetIdByLocationAsync(moveDirectoryModel.PathDestinationDirectory) ??
                                             throw new Exception("Отсутствует соответствующая запись директории");
 
             var operationDestinationDirectory = new OperationDirectory
@@ -166,7 +183,7 @@ public class DirectoryUseCase(
                 DirectoryId = idSourceDirectory
             };
 
-            await operationDirectoryRepository.AddAsync(operationDestinationDirectory);
+            await _operationDirectoryRepository.AddAsync(operationDestinationDirectory);
             await transaction.CommitAsync();
         }
         catch

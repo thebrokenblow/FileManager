@@ -86,7 +86,7 @@ public class MoveDirectoriesAction(
                 _fullPathDestinationDirectory,
                 _newFullPathDestinationDirectory);
 
-            await _directoryUseCase.MoveDirectoryAsync(moveDirectoryModel, _menu.UserId);
+            await _directoryUseCase.MoveAsync(moveDirectoryModel, _menu.UserId);
         }
         catch (Exception ex)
         {

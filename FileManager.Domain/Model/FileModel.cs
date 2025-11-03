@@ -4,4 +4,5 @@ public record FileModel(
     string FileName, 
     string FullPath, 
     DateTime CreateAt, 
-    long Size);
+    long Size
+);

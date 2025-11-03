@@ -69,7 +69,7 @@ public class CreateDirectoryAction(
                 _fullPathDirectory, 
                 dateTimeCreateDirectory);
 
-            await _directoryUseCase.CreateDirectoryAsync(directoryModel, _menu.UserId);
+            await _directoryUseCase.CreateAsync(directoryModel, _menu.UserId);
         }
         catch (Exception ex)
         {
