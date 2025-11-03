@@ -18,7 +18,7 @@ public class FileQueries(FileManagerContext context) : IFileQueries
         return fileOperation;
     }
 
-    public async Task<int?> GetIdByLocation(string fullPath)
+    public async Task<int?> GetIdByLocationAsync(string fullPath)
     {
         var fileId = await context.FileOperations
                                   .Where(operationFile => operationFile.File!.Location == fullPath)

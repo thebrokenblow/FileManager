@@ -19,16 +19,16 @@ public class InfoDisckAction(IMenu menu) : IFileSystemAction
 
         var drives = DriveInfo.GetDrives();
 
-        var stringResult = new StringBuilder();
+        var stringDrives = new StringBuilder();
 
         foreach (var drive in drives)
         {
-            stringResult.AppendLine($"Название: {drive.Name}");
-            stringResult.AppendLine($"Тип: {drive.DriveType}");
-            stringResult.AppendLine($"Объем диска: {drive.TotalSize}");
-            stringResult.AppendLine($"Свободное пространство: {drive.TotalFreeSpace}");
+            stringDrives.AppendLine($"Название: {drive.Name}");
+            stringDrives.AppendLine($"Тип: {drive.DriveType}");
+            stringDrives.AppendLine($"Объем диска: {drive.TotalSize}");
+            stringDrives.AppendLine($"Свободное пространство: {drive.TotalFreeSpace}");
         }
 
-        _menu.Output.Invoke(stringResult.ToString());
+        _menu.Output.Invoke(stringDrives.ToString());
     }
 }

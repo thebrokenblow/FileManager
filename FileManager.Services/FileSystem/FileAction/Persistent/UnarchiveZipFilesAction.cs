@@ -1,12 +1,20 @@
-﻿using FileManager.Services.Extensions;
+﻿using FileManager.Domain.Entities;
+using FileManager.Domain.Interfaces.Repositories;
+using FileManager.Domain.Model;
+using FileManager.Services.Exceptions;
+using FileManager.Services.Extensions;
+using FileManager.Services.FileSystem.DirectoryAction.Persistent;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
 using FileManager.Services.Validation;
 using System.IO.Compression;
 
-namespace FileManager.Services.FileSystem.FileAction.Transient;
+namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
-public class UnarchiveZipFilesAction(IMenu menu) : IFileSystemAction
+public class UnarchiveZipFilesAction(
+    IMenu menu,
+    IFileRepository fileRepository,
+    CreateDirectoryAction createDirectoryAction) : IFileSystemAction, IFileSystemPersistentAction
 {
     // Лимиты для защиты от ZIP-бомб
     private const long MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500 MB
@@ -20,8 +28,12 @@ public class UnarchiveZipFilesAction(IMenu menu) : IFileSystemAction
         throw new ArgumentNullException(nameof(menu));
 
     private readonly CommandValidator commandValidator = new();
+    private List<FileModel>? _files;
+
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
           .ValidateNotEmpty(command, "Команда не может быть пустой")
           .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -46,7 +58,15 @@ public class UnarchiveZipFilesAction(IMenu menu) : IFileSystemAction
                 fullPathArchiveDirectory,
                 $"Директория для архива: {nameFileArchive} уже существует удалите её или разархивируйте в другой директории");
 
-        Directory.CreateDirectory(fullPathArchiveDirectory);
+        try
+        {
+            createDirectoryAction.Execute($"mkdir {nameFileDirectory}");
+        }
+        catch
+        {
+            throw;
+        }
+
         SafeExtractArchive(fullPathNameFileArchive, fullPathArchiveDirectory);
     }
 
@@ -107,13 +127,15 @@ public class UnarchiveZipFilesAction(IMenu menu) : IFileSystemAction
         }
     }
 
-    private static void SafeExtractArchive(string archivePath, string extractPath)
+    private void SafeExtractArchive(string archivePath, string extractPath)
     {
         using var archive = ZipFile.OpenRead(archivePath);
 
         long totalExtractedSize = 0;
         int extractedFiles = 0;
         int createdDirectories = 0;
+
+        _files = [];
 
         foreach (var entry in archive.Entries)
         {
@@ -136,6 +158,16 @@ public class UnarchiveZipFilesAction(IMenu menu) : IFileSystemAction
                         Directory.CreateDirectory(directory);
                         createdDirectories++;
                     }
+
+                    var createAt = DateTime.UtcNow;
+
+                    var fileModel = new FileModel(
+                        entry.FullName,
+                        fullPath,
+                        createAt,
+                        entry.Length);
+
+                    _files.Add(fileModel);
 
                     entry.ExtractToFile(fullPath, overwrite: false);
                     totalExtractedSize += entry.Length;
@@ -177,10 +209,36 @@ public class UnarchiveZipFilesAction(IMenu menu) : IFileSystemAction
             throw new InvalidOperationException($"Ошибка при извлечении {extractPath}");
         }
     }
-}
 
-public class SecurityException : Exception
-{
-    public SecurityException(string message) : base(message) { }
-    public SecurityException(string message, Exception innerException) : base(message, innerException) { }
+    public async Task SaveToDatabaseAsync()
+    {
+        if (_files is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var infoFiles = _files.Select(file => new InfoFile
+            {
+                Filename = file.FullPath,
+                Size = file.Size,
+                CreatedAt = file.CreateAt,
+                Location = file.FullPath,
+                UserId = _menu.UserId,
+            })
+            .ToList();
+
+            await fileRepository.AddAsync(infoFiles);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при добавлении {_files?.Count} файлов", ex);
+        }
+    }
+
+    private void ResetFiled()
+    {
+        _files = null;
+    }
 }

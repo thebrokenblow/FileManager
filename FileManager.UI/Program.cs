@@ -25,8 +25,8 @@ if (!Directory.Exists(fullPathUserDirectory))
     Directory.CreateDirectory(fullPathUserDirectory);
 }
 
-services.AddTransient<DirectoryPath>();
-services.AddTransient<IMenu>(provider => new Menu
+services.AddScoped<DirectoryPath>();
+services.AddScoped<IMenu>(provider => new Menu
 {
     UserId = 1,
     Path = fullPathUserDirectory,

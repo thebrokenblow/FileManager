@@ -1,5 +1,6 @@
 ﻿using FileManager.Domain.Interfaces.Queries;
 using FileManager.Domain.Interfaces.Repositories;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -32,6 +33,8 @@ public class MoveFileAction(
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
             .ValidateNotEmpty(command, "Команда не может быть пустой")
             .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -70,12 +73,18 @@ public class MoveFileAction(
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var infoFile = await _fileQueries.GetByLocationAsync(_fullPathSourceFile) ?? 
-                                throw new Exception("Отсутствует соответствующая запись в базе данных");
-            
-        infoFile.Location = _fullNameDestinationDirectoryFile;
+        try
+        {
+            var infoFile = await _fileQueries.GetByLocationAsync(_fullPathSourceFile) ??
+                                    throw new DatabaseOperationException($"Файл не найден в базе данных: {_fullPathSourceFile}", null);
 
-        await _fileRepository.UpdateAsync(infoFile);
+            infoFile.Location = _fullNameDestinationDirectoryFile;
+            await _fileRepository.UpdateAsync(infoFile);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при обновлении местоположения файла '{_fullPathSourceFile}'", ex);
+        }
     }
 
     private void MoveFileToDirectoryBelow(string nameSourceFile, string fullPathSourceFile)
@@ -87,6 +96,12 @@ public class MoveFileAction(
             .ValidateFileNotExists(_fullNameDestinationDirectoryFile, $"Уже существует файл: {nameSourceFile} на уровне ниже");
 
         MoveFile(fullPathSourceFile, _fullNameDestinationDirectoryFile);
+    }
+
+    private void ResetFiled()
+    {
+        _fullPathSourceFile = null;
+        _fullNameDestinationDirectoryFile = null;
     }
 
     private static void MoveFile(string sourceFileName, string destFileName)

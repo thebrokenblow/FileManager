@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FileManager.Persistence.Migrations
 {
     [DbContext(typeof(FileManagerContext))]
-    [Migration("20251030105902_Init")]
-    partial class Init
+    [Migration("20251102193126_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

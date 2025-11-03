@@ -24,8 +24,9 @@ public class ChangeDirectoryAction(
     public void Execute(string command)
     {
         commandValidator
-            .ValidateNotEmpty(command, "Команда не может быть пустой")
-            .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
+            .ValidateNotEmpty(command, "Команда не может быть пустой");
+
+        var arguments = command.Split(WhitespaceCharsDictionary.AllWhitespace, StringSplitOptions.RemoveEmptyEntries);
 
         if ((arguments.Length < CountArguments || arguments.Length > CountArguments) && 
             !command.Equals(ExclusiveCaseMoveToDirectoryBelow, StringComparison.CurrentCultureIgnoreCase))

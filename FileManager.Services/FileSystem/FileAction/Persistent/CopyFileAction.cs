@@ -1,6 +1,6 @@
 ﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Entities.Enums;
 using FileManager.Domain.Interfaces.Repositories;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -24,11 +24,14 @@ public class CopyFileAction(
 
     private readonly CommandValidator commandValidator = new();
 
+    private long? _fileSize;
     private string? _nameSourceFile;
     private string? _nameDestinationDirectory;
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
             .ValidateNotEmpty(command, "Команда не может быть пустой")
             .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -64,23 +67,30 @@ public class CopyFileAction(
 
     public async Task SaveToDatabaseAsync()
     {
-        if (_nameSourceFile is null || _nameDestinationDirectory is null)
+        if (_nameSourceFile is null || _nameDestinationDirectory is null || _fileSize is null)
         {
-            throw new Exception();    
+            throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var dateTimeCreateArchive = DateTime.UtcNow;
-
-        var infoFile = new InfoFile
+        try
         {
-            Filename = _nameSourceFile,
-            Location = _nameDestinationDirectory,
-            CreatedAt = dateTimeCreateArchive,
-            Size = 0,
-            UserId = _menu.UserId
-        };
+            var dateTimeCreateArchive = DateTime.UtcNow;
 
-        await _fileRepository.AddAsync(infoFile, OperationTypeFile.Modify);
+            var infoFile = new InfoFile
+            {
+                Filename = _nameSourceFile,
+                Location = _nameDestinationDirectory,
+                CreatedAt = dateTimeCreateArchive,
+                Size = _fileSize.Value,
+                UserId = _menu.UserId
+            };
+
+            await _fileRepository.AddAsync(infoFile);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при добавлении информации о файле '{_nameSourceFile}'", ex);
+        }
     }
 
     private void CopyFileToDirectoryBelow(string nameSourceFile, string fullPathSourceFile)
@@ -94,15 +104,24 @@ public class CopyFileAction(
         CopyFile(fullPathSourceFile, fullPathFileBelow);
     }
 
-    private static void CopyFile(string sourceFileName, string destFileName)
+    private void CopyFile(string sourceFileName, string destFileName)
     {
         try
         {
             File.Copy(sourceFileName, destFileName);
+            var fileInfo = new FileInfo(destFileName);
+            _fileSize = fileInfo.Length;
         }
         catch
         {
-            throw new ArgumentException($"Ошибка перемещения деректории");
+            throw new ArgumentException($"Ошибка перемещения файла");
         }
+    }
+
+    private void ResetFiled()
+    {
+        _fileSize = null;
+        _nameSourceFile = null;
+        _nameDestinationDirectory = null;
     }
 }

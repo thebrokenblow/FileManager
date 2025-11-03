@@ -1,5 +1,6 @@
-﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Interfaces.Repositories;
+﻿using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Domain.Model;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -9,15 +10,15 @@ namespace FileManager.Services.FileSystem.DirectoryAction.Persistent;
 
 public class CreateDirectoryAction(
     IMenu menu, 
-    IDirectoryRepository directoryRepository) : IFileSystemAction, IFileSystemPersistentAction
+    IDirectoryUseCase directoryUseCase) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 2;
 
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));
 
-    private readonly IDirectoryRepository _directoryRepository = directoryRepository ?? 
-        throw new ArgumentNullException(nameof(directoryRepository));
+    private readonly IDirectoryUseCase _directoryUseCase = directoryUseCase ??
+        throw new ArgumentNullException(nameof(directoryUseCase));
 
     private readonly CommandValidator commandValidator = new();
 
@@ -26,6 +27,8 @@ public class CreateDirectoryAction(
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
             .ValidateNotEmpty(command, "Команда не может быть пустой")
             .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -57,16 +60,26 @@ public class CreateDirectoryAction(
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var dateTimeCreateDirectory = DateTime.UtcNow;
-
-        var infoDirectory = new InfoDirectory
+        try
         {
-            DirectoryName = _nameDirectory,
-            CreatedAt = dateTimeCreateDirectory,
-            Location = _fullPathDirectory,
-            UserId = _menu.UserId
-        };
+            var dateTimeCreateDirectory = DateTime.UtcNow;
 
-        await _directoryRepository.AddAsync(infoDirectory);
+            var directoryModel = new DirectoryModel(
+                _nameDirectory, 
+                _fullPathDirectory, 
+                dateTimeCreateDirectory);
+
+            await _directoryUseCase.CreateDirectoryAsync(directoryModel, _menu.UserId);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при создании директории '{_nameDirectory}'", ex);
+        }
+    }
+
+    private void ResetFiled()
+    {
+        _nameDirectory = null;
+        _fullPathDirectory = null;
     }
 }

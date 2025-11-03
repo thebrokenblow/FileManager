@@ -1,6 +1,6 @@
-﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Entities.Enums;
-using FileManager.Domain.Interfaces.Repositories;
+﻿using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Domain.Model;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -11,14 +11,15 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
 public class ArchiveZipFilesAction(
     IMenu menu,
-    IFileRepository fileRepository) : IFileSystemAction, IFileSystemPersistentAction
+    IFileUseCase fileUseCase) : IFileSystemAction, IFileSystemPersistentAction
 {
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));
 
-    private readonly IFileRepository _fileRepository = fileRepository ?? 
-        throw new ArgumentNullException(nameof(fileRepository));
+    private readonly IFileUseCase _fileUseCase = fileUseCase ?? 
+        throw new ArgumentNullException(nameof(fileUseCase));
 
+    private long? _archiveSize;
     private string? _nameFileArchive;
     private string? _fullPathFileArchive;
 
@@ -26,6 +27,8 @@ public class ArchiveZipFilesAction(
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
            .ValidateNotEmpty(command, "Команда не может быть пустой");
 
@@ -46,61 +49,84 @@ public class ArchiveZipFilesAction(
         var filesToArchive = arguments[2..] ??
                                 throw new ArgumentException("Файлы для архива не указаны");
 
-        using var archive = ZipFile.Open(_fullPathFileArchive, ZipArchiveMode.Create);
-
-        var files = new List<FileInfo>();
-        foreach (var fileToArchive in filesToArchive)
+        try
         {
-            var fullPathFileToArchive = Path.Combine(_menu.Path, fileToArchive);
+            using var archive = ZipFile.Open(_fullPathFileArchive, ZipArchiveMode.Create);
 
-            commandValidator.ValidateCustom(
-                                () => !File.Exists(fullPathFileToArchive) && !Directory.Exists(fullPathFileToArchive),
-                                $"Не существует файла или директории: {fileToArchive} в текущей директории")
-                            .ValidatePathSecurity(fileToArchive, $"Недопустимое имя или дериктории: {fileToArchive}");
+            var files = new List<FileInfo>();
+            foreach (var fileToArchive in filesToArchive)
+            {
+                var fullPathFileToArchive = Path.Combine(_menu.Path, fileToArchive);
 
-            if (File.Exists(fullPathFileToArchive))
-            {
-                archive.CreateEntryFromFile(fullPathFileToArchive, fileToArchive);
+                commandValidator.ValidateCustom(
+                                    () => ValidateNotExists(fullPathFileToArchive),
+                                    $"Не существует файла или директории: {fileToArchive} в текущей директории")
+                                .ValidatePathSecurity(fileToArchive, $"Недопустимое имя или дериктории: {fileToArchive}");
+
+                if (File.Exists(fullPathFileToArchive))
+                {
+                    archive.CreateEntryFromFile(fullPathFileToArchive, fileToArchive);
+                }
+                else
+                {
+                    AddDirectoryToArchive(archive, fullPathFileToArchive, fileToArchive);
+                }
             }
-            else
+
+            var fileInfo = new FileInfo(_fullPathFileArchive);
+
+            _archiveSize = 0;
+            if (fileInfo.Exists)
             {
-                AddDirectoryToArchive(archive, fullPathFileToArchive, fileToArchive);
+                _archiveSize = fileInfo.Length;
             }
+        }
+        catch (Exception)
+        {
+            throw new ArgumentException("Ошибка аргументов при создании архива");
         }
     }
 
     public async Task SaveToDatabaseAsync()
     {
-        if (_nameFileArchive is null || _fullPathFileArchive is null)
+        if (_archiveSize is null ||
+            _nameFileArchive is null || 
+            _fullPathFileArchive is null)
         {
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var dateTimeCreateArchive = DateTime.UtcNow;
-
-        var infoFile = new InfoFile
+        try
         {
-            Filename = _nameFileArchive,
-            Location = _fullPathFileArchive,
-            CreatedAt = dateTimeCreateArchive,
-            Size = 0,
-            UserId = _menu.UserId
-        };
+            var createAt = DateTime.UtcNow;
+            var fileModel = new FileModel(_nameFileArchive, _fullPathFileArchive, createAt, _archiveSize.Value);
 
-        await _fileRepository.AddAsync(infoFile, OperationTypeFile.Create);
+            await _fileUseCase.CreateFileAsync(fileModel, _menu.UserId);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при создании архива '{_nameFileArchive}'", ex);
+        }
     }
 
     private void EnsureZipExtension()
     {
-        if (_nameFileArchive is null)
+        if (_fullPathFileArchive is null)
         {
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        if (!_nameFileArchive.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        if (!_fullPathFileArchive.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
         {
-            _nameFileArchive += ".zip";
+            _fullPathFileArchive += ".zip";
         }
+    }
+
+    private void ResetFiled()
+    {
+        _archiveSize = null;
+        _nameFileArchive = null;
+        _fullPathFileArchive = null;
     }
 
     private static void AddDirectoryToArchive(ZipArchive archive, string directoryPath, string relativePath)
@@ -122,5 +148,11 @@ public class ArchiveZipFilesAction(
 
             AddDirectoryToArchive(archive, subdirectory, newRelativePath);
         }
+    }
+
+
+    private static bool ValidateNotExists(string fullPathFileToArchive)
+    {
+        return !File.Exists(fullPathFileToArchive) && !Directory.Exists(fullPathFileToArchive);
     }
 }

@@ -1,6 +1,6 @@
 ﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Entities.Enums;
 using FileManager.Domain.Interfaces.Repositories;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -13,6 +13,7 @@ public class CreateFileAction(
     IFileRepository fileRepository) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 2;
+    private const int FileSizeWhenCreated = 0;
 
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
@@ -27,6 +28,8 @@ public class CreateFileAction(
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
             .ValidateNotEmpty(command, "Команда не может быть пустой")
             .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -59,17 +62,30 @@ public class CreateFileAction(
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var dateTimeCreateArchive = DateTime.UtcNow;
-
-        var infoFile = new InfoFile
+        try
         {
-            Filename = _nameFile,
-            Location = _fullPath,
-            CreatedAt = dateTimeCreateArchive,
-            Size = 0,
-            UserId = _menu.UserId
-        };
+            var dateTimeCreateArchive = DateTime.UtcNow;
 
-        await _fileRepository.AddAsync(infoFile, OperationTypeFile.Create);
+            var infoFile = new InfoFile
+            {
+                Filename = _nameFile,
+                Location = _fullPath,
+                CreatedAt = dateTimeCreateArchive,
+                Size = FileSizeWhenCreated,
+                UserId = _menu.UserId
+            };
+
+            await _fileRepository.AddAsync(infoFile);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка при создании файла в БД: {_nameFile}", ex);
+        }
+    }
+
+    private void ResetFiled()
+    {
+        _nameFile = null;
+        _fullPath = null;
     }
 }

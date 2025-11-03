@@ -1,5 +1,6 @@
 ﻿using FileManager.Domain.Interfaces.UseCases;
 using FileManager.Domain.Model;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -22,11 +23,13 @@ public class DeleteDirectoryAction(
     private readonly CommandValidator commandValidator = new();
 
     private string? _fullPathDirectory;
-    private string[]? childLocationsFiles;
-    private string[]? childLocationsDirectories;
+    private string[]? _childLocationsFiles;
+    private string[]? _childLocationsDirectories;
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
             .ValidateNotEmpty(command, "Команда не может быть пустой")
             .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -42,12 +45,12 @@ public class DeleteDirectoryAction(
             .ValidateDirectoryExists(_fullPathDirectory, $"Нет дериктории с именем: {nameDirectory}");
 
 
-        childLocationsFiles = Directory.GetFiles(_fullPathDirectory, "*", SearchOption.AllDirectories);
-        childLocationsDirectories = Directory.GetDirectories(_fullPathDirectory, "*", SearchOption.AllDirectories);
+        _childLocationsFiles = Directory.GetFiles(_fullPathDirectory, "*", SearchOption.AllDirectories);
+        _childLocationsDirectories = Directory.GetDirectories(_fullPathDirectory, "*", SearchOption.AllDirectories);
 
         try
         {
-            Directory.Delete(_fullPathDirectory, true);
+            Directory.Delete(_fullPathDirectory, recursive: true);
         }
         catch
         {
@@ -62,13 +65,28 @@ public class DeleteDirectoryAction(
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var deleteDirectoryModel = new DeleteDirectoryModel(
-            DateTime.UtcNow,
-            _fullPathDirectory,
-            _menu.UserId,
-            childLocationsFiles,
-            childLocationsDirectories);
+        try
+        {
+            var dateTimeDirectoryDelete = DateTime.UtcNow;
 
-        await _directoryUseCase.DeleteDirectoryAsync(deleteDirectoryModel);
+            var deleteDirectoryModel = new DeleteDirectoryModel(
+                dateTimeDirectoryDelete,
+                _fullPathDirectory,
+                _childLocationsFiles,
+                _childLocationsDirectories);
+
+            await _directoryUseCase.DeleteDirectoryAsync(deleteDirectoryModel, _menu.UserId);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при удалении директории '{_fullPathDirectory}'", ex);
+        }
+    }
+
+    private void ResetFiled()
+    {
+        _fullPathDirectory = null;
+        _childLocationsFiles = null;
+        _childLocationsDirectories = null;
     }
 }

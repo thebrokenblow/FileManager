@@ -1,9 +1,6 @@
-﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Entities.Enums;
-using FileManager.Domain.Interfaces.Queries;
-using FileManager.Domain.Interfaces.Repositories;
-using FileManager.Domain.Interfaces.UseCases;
+﻿using FileManager.Domain.Interfaces.UseCases;
 using FileManager.Domain.Model;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -34,6 +31,8 @@ public class MoveDirectoriesAction(
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
             .ValidateNotEmpty(command, "Команда не может быть пустой")
             .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -77,14 +76,22 @@ public class MoveDirectoriesAction(
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var moveDirectoryModel = new MoveDirectoryModel(
-            DateTime.UtcNow,
-            _fullPathSourceDirectory,
-            _fullPathDestinationDirectory,
-            _newFullPathDestinationDirectory,
-            _menu.UserId);
+        try
+        {
+            var dateTimeMoveDirectory = DateTime.UtcNow;
 
-        await _directoryUseCase.MoveDirectoryAsync(moveDirectoryModel);
+            var moveDirectoryModel = new MoveDirectoryModel(
+                dateTimeMoveDirectory,
+                _fullPathSourceDirectory,
+                _fullPathDestinationDirectory,
+                _newFullPathDestinationDirectory);
+
+            await _directoryUseCase.MoveDirectoryAsync(moveDirectoryModel, _menu.UserId);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при перемещении директории '{_fullPathSourceDirectory}'", ex);
+        }
     }
 
     private void MoveDirectoryToDirectoryBelow(string nameSourceDirectory, string fullPathSourceDirectory)
@@ -110,5 +117,12 @@ public class MoveDirectoriesAction(
         {
             throw new ArgumentException($"Ошибка перемещения деректории");
         }
+    }
+
+    private void ResetFiled()
+    {
+        _fullPathSourceDirectory = null;
+        _fullPathDestinationDirectory = null;
+        _newFullPathDestinationDirectory = null;
     }
 }

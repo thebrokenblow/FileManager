@@ -2,6 +2,7 @@
 using FileManager.Domain.Entities.Enums;
 using FileManager.Domain.Interfaces.Queries;
 using FileManager.Domain.Interfaces.Repositories;
+using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
 using FileManager.Services.Utils;
@@ -31,6 +32,8 @@ public class DeleteFileAction(
 
     public void Execute(string command)
     {
+        ResetFiled();
+
         commandValidator
             .ValidateNotEmpty(command, "Команда не может быть пустой")
             .ValidateArgumentsCount(out string[] arguments, command, CountArguments, $"Некорректное количество аргументов: {command}");
@@ -62,17 +65,29 @@ public class DeleteFileAction(
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
-        var fileId = await _fileQueries.GetIdByLocation(_fullPath) ??
-                                    throw new Exception("Отсутствует соответствующая запись директории");
-
-        var operationFile = new OperationFile
+        try
         {
-            OperationType = OperationTypeFile.Delete,
-            ExecutedAt = DateTime.UtcNow,
-            FileId = fileId,
-            UserId = _menu.UserId,
-        };
+            var fileId = await _fileQueries.GetIdByLocationAsync(_fullPath) ??
+                                        throw new DatabaseOperationException($"Файл не найден в базе данных: {_fullPath}", null);
 
-        await _operationFileRepository.AddAsync(operationFile);
+            var operationFile = new OperationFile
+            {
+                OperationType = OperationTypeFile.Delete,
+                ExecutedAt = DateTime.UtcNow,
+                FileId = fileId,
+                UserId = _menu.UserId,
+            };
+
+            await _operationFileRepository.AddAsync(operationFile);
+        }
+        catch (Exception ex)
+        {
+            throw new DatabaseOperationException($"Ошибка базы данных при добавлении операции удаления файла '{_fullPath}'", ex);
+        }
+    }
+
+    private void ResetFiled()
+    {
+        _fullPath = null;
     }
 }

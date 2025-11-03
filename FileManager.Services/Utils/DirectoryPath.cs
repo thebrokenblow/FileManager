@@ -18,7 +18,7 @@ public class DirectoryPath(IMenu menu)
         var currentDirectory = Directory.GetCurrentDirectory();
         if (pathWithoutLastDirectory == currentDirectory)
         {
-            throw new ArgumentException($"Нельзя выйти за границы дериктории: {menu.Path}");
+            throw new ArgumentException($"Нельзя выйти за границы дериктории: {_menu.Path}");
         }
 
         return pathWithoutLastDirectory;

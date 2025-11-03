@@ -22,10 +22,7 @@ public static class DependencyInjection
     {
         // Регистрация контекста базы данных
         services.AddDbContext<FileManagerContext>(options =>
-            options.UseSqlServer("\"Data Source=(localdb)\\\\MSSQLLocalDB;Initial Catalog=file_manager;Integrated Security=True;Connect Timeout=30;Encrypt=False;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False\""));
-
-        // Регистрация фабрики контекста (если используется)
-        services.AddScoped<FileManagerContextFactory>();
+            options.UseSqlServer(connectionString));
 
         // Регистрация query-сервисов для работы с данными
         services.AddScoped<IFileQueries, FileQueries>();
@@ -41,6 +38,7 @@ public static class DependencyInjection
 
         // Регистрация use case'ов (бизнес-сценариев) для работы с директориями
         services.AddScoped<IDirectoryUseCase, DirectoryUseCase>();
+        services.AddScoped<IFileUseCase, FileUseCase>();
 
         return services;
     }
