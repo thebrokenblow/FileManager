@@ -1,5 +1,5 @@
-﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Interfaces.Repositories;
+﻿using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Domain.Model;
 using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
@@ -10,7 +10,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
 public class CopyFileAction(
     IMenu menu,
-    IFileRepository fileRepository,
+    IFileUseCase fileUseCase,
     DirectoryPath directoryPath) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 3;
@@ -19,14 +19,15 @@ public class CopyFileAction(
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));
 
-    private readonly IFileRepository _fileRepository = fileRepository ??
-        throw new ArgumentNullException(nameof(fileRepository));
+    private readonly IFileUseCase _fileUseCase = fileUseCase ??
+        throw new ArgumentNullException(nameof(fileUseCase));
 
     private readonly CommandValidator commandValidator = new();
 
     private long? _fileSize;
     private string? _nameSourceFile;
-    private string? _nameDestinationDirectory;
+    private string? _fullPathSourceFile;
+    private string? _fullPathDestinationFile;
 
     public void Execute(string command)
     {
@@ -38,54 +39,55 @@ public class CopyFileAction(
 
         var nameCommand = arguments.First();
         _nameSourceFile = arguments.Second();
-        _nameDestinationDirectory = arguments.Third();
-        var fullPathSourceFile = Path.Combine(menu.Path, _nameSourceFile);
+        var nameDestinationDirectory = arguments.Third();
+
+        _fullPathSourceFile = Path.Combine(menu.Path, _nameSourceFile);
 
         commandValidator
             .ValidateCommandName(nameCommand, CommandDictionary.CopyFile, $"Команда: {command} не распознана")
             .ValidateNotEmpty(_nameSourceFile, "Название файла не может быть пустым")
             .ValidatePathSecurity(_nameSourceFile, $"Недопустимое имя файла: {_nameSourceFile}")
-            .ValidateFileExists(fullPathSourceFile, $"Не существует файла с названием: {_nameSourceFile}");
+            .ValidateFileExists(_fullPathSourceFile, $"Не существует файла с названием: {_nameSourceFile}");
 
-        if (_nameDestinationDirectory.Equals(ArgumentMoveFileBelow, StringComparison.CurrentCultureIgnoreCase))
+        if (nameDestinationDirectory.Equals(ArgumentMoveFileBelow, StringComparison.CurrentCultureIgnoreCase))
         {
-            CopyFileToDirectoryBelow(_nameSourceFile, fullPathSourceFile);
+            CopyFileToDirectoryBelow(_nameSourceFile, _fullPathSourceFile);
             return;
         }
 
-        var fullPathDestinationDirectory = Path.Combine(menu.Path, _nameDestinationDirectory);
-        var fullPathDestinationFile = Path.Combine(fullPathDestinationDirectory, _nameSourceFile);
+        var fullPathDestinationDirectory = Path.Combine(menu.Path, nameDestinationDirectory);
+        _fullPathDestinationFile = Path.Combine(fullPathDestinationDirectory, _nameSourceFile);
 
         commandValidator
-            .ValidateNotEmpty(_nameDestinationDirectory, "Название директории не должно быть пустым")
-            .ValidatePathSecurity(_nameDestinationDirectory, $"Недопустимое имя директории: {_nameDestinationDirectory}")
-            .ValidateDirectoryExists(fullPathDestinationDirectory, $"Не существует директории с названием: {_nameDestinationDirectory}")
-            .ValidateFileNotExists(fullPathDestinationFile, $"Файл с названием: {_nameSourceFile} уже существует в директории: {_nameDestinationDirectory}");
+            .ValidateNotEmpty(nameDestinationDirectory, "Название директории не должно быть пустым")
+            .ValidatePathSecurity(nameDestinationDirectory, $"Недопустимое имя директории: {nameDestinationDirectory}")
+            .ValidateDirectoryExists(fullPathDestinationDirectory, $"Не существует директории с названием: {nameDestinationDirectory}")
+            .ValidateFileNotExists(_fullPathDestinationFile, $"Файл с названием: {_nameSourceFile} уже существует в директории: {nameDestinationDirectory}");
 
-        CopyFile(fullPathSourceFile, fullPathDestinationFile);
+        CopyFile(_fullPathSourceFile, _fullPathDestinationFile);
     }
 
     public async Task SaveToDatabaseAsync()
     {
-        if (_nameSourceFile is null || _nameDestinationDirectory is null || _fileSize is null)
+        if (_fileSize is null ||
+            _nameSourceFile is null ||
+            _fullPathSourceFile is null || 
+            _fullPathDestinationFile is null)
         {
             throw new InvalidOperationException("Некорректное поведение системы");
         }
 
         try
         {
-            var dateTimeCreateArchive = DateTime.UtcNow;
+            var dateTimeCopyFile = DateTime.UtcNow;
 
-            var infoFile = new InfoFile
-            {
-                Filename = _nameSourceFile,
-                Location = _nameDestinationDirectory,
-                CreatedAt = dateTimeCreateArchive,
-                Size = _fileSize.Value,
-                UserId = _menu.UserId
-            };
+            var fileModel = new FileModel(
+                _nameSourceFile,
+                _fullPathDestinationFile,
+                dateTimeCopyFile,
+                _fileSize.Value);
 
-            await _fileRepository.AddAsync(infoFile);
+            await _fileUseCase.CreateFileAsync(fileModel, _menu.UserId);
         }
         catch (Exception ex)
         {
@@ -122,6 +124,6 @@ public class CopyFileAction(
     {
         _fileSize = null;
         _nameSourceFile = null;
-        _nameDestinationDirectory = null;
+        _fullPathSourceFile = null;
     }
 }

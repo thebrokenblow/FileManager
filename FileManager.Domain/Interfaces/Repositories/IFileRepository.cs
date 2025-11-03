@@ -1,5 +1,4 @@
 ﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Entities.Enums;
 
 namespace FileManager.Domain.Interfaces.Repositories;
 

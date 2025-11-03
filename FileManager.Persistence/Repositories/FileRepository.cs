@@ -8,7 +8,7 @@ public class FileRepository(FileManagerContext context) : IFileRepository
 {
     public async Task AddAsync(InfoFile infoFile)
     {
-        await context.AddRangeAsync(infoFile);
+        await context.AddAsync(infoFile);
         await context.SaveChangesAsync();
     }
 

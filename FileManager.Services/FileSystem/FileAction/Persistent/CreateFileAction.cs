@@ -1,5 +1,5 @@
-﻿using FileManager.Domain.Entities;
-using FileManager.Domain.Interfaces.Repositories;
+﻿using FileManager.Domain.Interfaces.UseCases;
+using FileManager.Domain.Model;
 using FileManager.Services.Exceptions;
 using FileManager.Services.Extensions;
 using FileManager.Services.FileSystem.Interfaces;
@@ -10,7 +10,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
 public class CreateFileAction(
     IMenu menu, 
-    IFileRepository fileRepository) : IFileSystemAction, IFileSystemPersistentAction
+    IFileUseCase fileUseCase) : IFileSystemAction, IFileSystemPersistentAction
 {
     private const int CountArguments = 2;
     private const int FileSizeWhenCreated = 0;
@@ -18,8 +18,8 @@ public class CreateFileAction(
     private readonly IMenu _menu = menu ??
         throw new ArgumentNullException(nameof(menu));
 
-    private readonly IFileRepository _fileRepository = fileRepository ??
-        throw new ArgumentNullException(nameof(fileRepository));
+    private readonly IFileUseCase _fileUseCase = fileUseCase ??
+        throw new ArgumentNullException(nameof(fileUseCase));
 
     private readonly CommandValidator commandValidator = new();
 
@@ -64,18 +64,14 @@ public class CreateFileAction(
 
         try
         {
-            var dateTimeCreateArchive = DateTime.UtcNow;
+            var dateTimeCreateFile = DateTime.UtcNow;
+            var fileModel = new FileModel(
+                _nameFile, 
+                _fullPath, 
+                dateTimeCreateFile, 
+                FileSizeWhenCreated);
 
-            var infoFile = new InfoFile
-            {
-                Filename = _nameFile,
-                Location = _fullPath,
-                CreatedAt = dateTimeCreateArchive,
-                Size = FileSizeWhenCreated,
-                UserId = _menu.UserId
-            };
-
-            await _fileRepository.AddAsync(infoFile);
+            await _fileUseCase.CreateFileAsync(fileModel, _menu.UserId);
         }
         catch (Exception ex)
         {
