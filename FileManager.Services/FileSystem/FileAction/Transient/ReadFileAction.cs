@@ -5,7 +5,7 @@ using FileManager.Services.Validation;
 
 namespace FileManager.Services.FileSystem.FileAction.Transient;
 
-public class ReadFileAction(IMenu menu) : IFileSystemAction
+public class ReadFileAction(IMenu menu) : IFileSystemCommand
 {
     private const int CountArguments = 2;
 

@@ -7,7 +7,7 @@ public class Menu : IMenu
 {
     public const string TitleUserDirectory = "UserDirectory";
 
-    public required int UserId { get; init; }
+    public int UserId { get; set; }
     public required string Path { get; set; }
 
     public required Action<string> Output { get; init; }

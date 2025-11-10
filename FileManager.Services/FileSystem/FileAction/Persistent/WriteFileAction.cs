@@ -11,7 +11,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
 public class WriteFileAction(
     IMenu menu,
-    IFileUseCase fileUseCase) : IFileSystemAction, IFileSystemPersistentAction
+    IFileUseCase fileUseCase) : IFileSystemCommand, IFileSystemPersistent
 {
     private const int CountArguments = 2;
 

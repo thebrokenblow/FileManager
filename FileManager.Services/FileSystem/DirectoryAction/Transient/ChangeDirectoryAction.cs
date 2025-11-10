@@ -8,7 +8,7 @@ namespace FileManager.Services.FileSystem.DirectoryAction.Transient;
 
 public class ChangeDirectoryAction(
     IMenu menu, 
-    DirectoryPath directoryPath) : IFileSystemAction
+    DirectoryPath directoryPath) : IFileSystemCommand
 {
     private const string SymbolMoveToDirectoryBelow = "..";
 

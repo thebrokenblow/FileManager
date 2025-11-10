@@ -5,7 +5,7 @@ using System.Text;
 
 namespace FileManager.Services.FileSystem.Disck.Transient;
 
-public class InfoDisckAction(IMenu menu) : IFileSystemAction
+public class InfoDisckAction(IMenu menu) : IFileSystemCommand
 {
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));

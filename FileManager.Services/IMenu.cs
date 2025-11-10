@@ -4,7 +4,7 @@ namespace FileManager.Services;
 
 public interface IMenu
 {
-    int UserId { get; }
+    int UserId { get; set; }
     string Path { get; set; }
     Action<string> Output { get; }
     Action<HelpInfo> OutputHelpPanel { get; }

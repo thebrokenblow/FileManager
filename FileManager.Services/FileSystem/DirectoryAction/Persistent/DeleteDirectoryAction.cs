@@ -10,7 +10,7 @@ namespace FileManager.Services.FileSystem.DirectoryAction.Persistent;
 
 public class DeleteDirectoryAction(
     IMenu menu,
-    IDirectoryUseCase directoryUseCase) : IFileSystemAction, IFileSystemPersistentAction
+    IDirectoryUseCase directoryUseCase) : IFileSystemCommand, IFileSystemPersistent
 {
     private const int CountArguments = 2;
 

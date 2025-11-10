@@ -25,10 +25,12 @@ public static class DependencyInjection
             options.UseSqlServer(connectionString));
 
         // Регистрация query-сервисов для работы с данными
+        services.AddScoped<IUserQueries, UserQueries>();
         services.AddScoped<IFileQueries, FileQueries>();
         services.AddScoped<IDirectoryQueries, DirectoryQueries>();
 
         // Регистрация репозиториев для базовых CRUD операций
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IFileRepository, FileRepository>();
         services.AddScoped<IDirectoryRepository, DirectoryRepository>();
 

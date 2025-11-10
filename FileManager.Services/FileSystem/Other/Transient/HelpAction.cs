@@ -9,7 +9,7 @@ namespace FileManager.Services.FileSystem.Other.Transient;
 /// <summary>
 /// Команда для отображения справочной информации по доступным командам
 /// </summary>
-public class HelpAction(IMenu menu) : IFileSystemAction
+public class HelpAction(IMenu menu) : IFileSystemCommand
 {
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));

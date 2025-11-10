@@ -11,7 +11,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
 public class ArchiveZipFilesAction(
     IMenu menu,
-    IFileUseCase fileUseCase) : IFileSystemAction, IFileSystemPersistentAction
+    IFileUseCase fileUseCase) : IFileSystemCommand, IFileSystemPersistent
 {
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));

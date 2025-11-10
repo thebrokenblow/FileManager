@@ -13,7 +13,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 public class DeleteFileAction(
     IMenu menu,
     IFileQueries fileQueries,
-    IOperationFileRepository operationFileRepository) : IFileSystemAction, IFileSystemPersistentAction
+    IOperationFileRepository operationFileRepository) : IFileSystemCommand, IFileSystemPersistent
 {
     private const int CountArguments = 2;
 

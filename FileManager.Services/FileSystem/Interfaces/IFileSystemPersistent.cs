@@ -1,6 +1,6 @@
 ﻿namespace FileManager.Services.FileSystem.Interfaces;
 
-public interface IFileSystemPersistentAction
+public interface IFileSystemPersistent
 {
     Task SaveToDatabaseAsync();
 }

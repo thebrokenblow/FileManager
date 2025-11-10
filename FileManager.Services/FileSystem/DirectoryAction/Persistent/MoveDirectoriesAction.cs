@@ -11,7 +11,7 @@ namespace FileManager.Services.FileSystem.DirectoryAction.Persistent;
 public class MoveDirectoriesAction(
     IMenu menu,
     IDirectoryUseCase directoryUseCase,
-    DirectoryPath directoryPath) : IFileSystemAction, IFileSystemPersistentAction
+    DirectoryPath directoryPath) : IFileSystemCommand, IFileSystemPersistent
 {
     private const int CountArguments = 3;
 

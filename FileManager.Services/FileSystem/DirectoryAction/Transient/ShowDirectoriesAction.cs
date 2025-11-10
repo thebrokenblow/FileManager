@@ -6,7 +6,7 @@ using System.Text;
 
 namespace FileManager.Services.FileSystem.DirectoryAction.Transient;
 
-public class ShowDirectoriesAction(IMenu menu) : IFileSystemAction
+public class ShowDirectoriesAction(IMenu menu) : IFileSystemCommand
 {
     private readonly IMenu _menu = menu ?? 
         throw new ArgumentNullException(nameof(menu));

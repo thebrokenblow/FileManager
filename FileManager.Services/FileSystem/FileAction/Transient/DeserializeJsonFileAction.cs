@@ -6,7 +6,7 @@ using FileManager.Services.Validation;
 
 namespace FileManager.Services.FileSystem.FileAction.Transient;
 
-public class DeserializeJsonFileAction(IMenu menu) : IFileSystemAction
+public class DeserializeJsonFileAction(IMenu menu) : IFileSystemCommand
 {
     private const int CountArguments = 2;
 

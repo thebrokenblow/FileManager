@@ -10,7 +10,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 
 public class CreateFileAction(
     IMenu menu, 
-    IFileUseCase fileUseCase) : IFileSystemAction, IFileSystemPersistentAction
+    IFileUseCase fileUseCase) : IFileSystemCommand, IFileSystemPersistent
 {
     private const int CountArguments = 2;
     private const int FileSizeWhenCreated = 0;

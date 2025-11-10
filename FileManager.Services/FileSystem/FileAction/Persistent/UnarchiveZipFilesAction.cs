@@ -14,7 +14,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 public class UnarchiveZipFilesAction(
     IMenu menu,
     IFileRepository fileRepository,
-    CreateDirectoryAction createDirectoryAction) : IFileSystemAction, IFileSystemPersistentAction
+    CreateDirectoryAction createDirectoryAction) : IFileSystemCommand, IFileSystemPersistent
 {
     // Лимиты для защиты от ZIP-бомб
     // 500 MB

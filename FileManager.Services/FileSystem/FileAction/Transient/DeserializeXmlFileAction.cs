@@ -7,7 +7,7 @@ using System.Xml;
 
 namespace FileManager.Services.FileSystem.FileAction.Transient;
 
-public class DeserializeXmlFileAction(IMenu menu) : IFileSystemAction
+public class DeserializeXmlFileAction(IMenu menu) : IFileSystemCommand
 {
     private const int CountArguments = 2;
 

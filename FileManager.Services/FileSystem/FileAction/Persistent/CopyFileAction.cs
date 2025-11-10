@@ -11,7 +11,7 @@ namespace FileManager.Services.FileSystem.FileAction.Persistent;
 public class CopyFileAction(
     IMenu menu,
     IFileUseCase fileUseCase,
-    DirectoryPath directoryPath) : IFileSystemAction, IFileSystemPersistentAction
+    DirectoryPath directoryPath) : IFileSystemCommand, IFileSystemPersistent
 {
     private const int CountArguments = 3;
     public const string ArgumentMoveFileBelow = "-l";

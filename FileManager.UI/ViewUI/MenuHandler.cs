@@ -14,7 +14,7 @@ namespace FileManager.UI.ViewUI;
 public class MenuHandler
 {
     private readonly IMenu _menu;
-    private Dictionary<string, IFileSystemAction> _fileSystemActionByNameCommand = [];
+    private Dictionary<string, IFileSystemCommand> _fileSystemActionByNameCommand = [];
 
     public MenuHandler(IMenu menu, IServiceProvider serviceProvider)
     {
@@ -37,20 +37,28 @@ public class MenuHandler
         var commandAndArguments = inputCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var titleCommand = commandAndArguments.First()
                                               .ToLower();
+
+        if (!_fileSystemActionByNameCommand.TryGetValue(titleCommand, out IFileSystemCommand? fileSystemCommand))
+        {
+            Console.WriteLine($"Отсутствует команда: {inputCommand} воспользуйтесь help");
+            return;
+        }
+
         try
         {
-            if (_fileSystemActionByNameCommand.TryGetValue(titleCommand, out IFileSystemAction? actioncommand))
-            {
-                actioncommand.Execute(inputCommand);
-            }
-            else
-            {
-                Console.WriteLine($"Отсутствует команда: {inputCommand} воспользуйтесь help");
-            }
+            fileSystemCommand.Execute(inputCommand);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return;
+        }
 
-            if (actioncommand is IFileSystemPersistentAction fileSystemPersistentAction)
+        try
+        {
+            if (fileSystemCommand is IFileSystemPersistent fileSystemPersistent)
             {
-                await fileSystemPersistentAction.SaveToDatabaseAsync();
+                await fileSystemPersistent.SaveToDatabaseAsync();
             }
         }
         catch (Exception ex)
